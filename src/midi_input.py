@@ -1,22 +1,24 @@
 import mido
+from tonnetz import NOTE_NAMES, print_grid
 
-NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F',
-              'F#', 'G', 'G#', 'A', 'A#', 'B']
 
 def note_name(n: int) -> str:
     return f"{NOTE_NAMES[n % 12]}{n // 12 - 1}"
 
-held = set()   # 当前按住的音
+held = set()   # MIDI note numbers currently held down
 
 with mido.open_input() as inport:
+    print("Listening... press the stop button to quit")
     for msg in inport:
         if msg.type == 'note_on' and msg.velocity > 0:
             held.add(msg.note)
         elif msg.type in ('note_off', 'note_on'):
+            # Some keyboards send note_on with velocity 0 instead of note_off
             held.discard(msg.note)
         else:
-            continue
+            continue  # Ignore other messages (control change, clock, etc.)
 
-        names = [note_name(n) for n in sorted(held)]
-        pitch_classes = sorted({n % 12 for n in held})
-        print(names, pitch_classes)
+        pitch_classes = {n % 12 for n in held}
+        print("-" * 45)
+        print([note_name(n) for n in sorted(held)])
+        print_grid(highlight=pitch_classes)
