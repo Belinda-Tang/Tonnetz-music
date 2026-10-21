@@ -20,7 +20,8 @@ with mido.open_input() as inport:
             continue  # Ignore other messages (control change, clock, etc.)
 
         pitch_classes = {n % 12 for n in held}
-        chord = identify_triad(pitch_classes)
+        bass = min(held) % 12 if held else None
+        chord = identify_triad(pitch_classes, bass=bass)
         label = chord_name(*chord) if chord else "-"
         print("-" * 45)
         print([note_name(n) for n in sorted(held)], "->", label)
