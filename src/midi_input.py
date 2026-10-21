@@ -1,5 +1,6 @@
 import mido
 from tonnetz import NOTE_NAMES, print_grid
+from chords import identify_triad, chord_name
 
 
 def note_name(n: int) -> str:
@@ -19,6 +20,8 @@ with mido.open_input() as inport:
             continue  # Ignore other messages (control change, clock, etc.)
 
         pitch_classes = {n % 12 for n in held}
+        chord = identify_triad(pitch_classes)
+        label = chord_name(*chord) if chord else "-"
         print("-" * 45)
-        print([note_name(n) for n in sorted(held)])
+        print([note_name(n) for n in sorted(held)], "->", label)
         print_grid(highlight=pitch_classes)
