@@ -1,3 +1,5 @@
+from collections import deque
+
 import matplotlib.pyplot as plt
 import mido
 
@@ -6,17 +8,16 @@ from tonnetz_view import draw
 
 
 def main() -> None:
-    plt.ion()  # Interactive mode: the window updates without blocking
+    plt.ion()
     fig, ax = plt.subplots(figsize=(10, 6))
     draw(ax, set())
 
     held = set()
+    history = deque(maxlen=4)  # The 4 most recent chords, oldest first
+
     with mido.open_input() as inport:
-        # Keep running until the plot window is closed
         while plt.fignum_exists(fig.number):
             changed = False
-
-            # Read all MIDI messages that arrived since the last frame
             for msg in inport.iter_pending():
                 if msg.type == "note_on" and msg.velocity > 0:
                     held.add(msg.note)
@@ -29,11 +30,16 @@ def main() -> None:
                 pcs = {n % 12 for n in held}
                 bass = min(held) % 12 if held else None
                 chord = identify_triad(pcs, bass=bass)
+
+                # Record a chord only when it is new
+                if chord and (not history or history[-1] != chord):
+                    history.append(chord)
+
                 label = chord_name(*chord) if chord else ""
-                draw(ax, pcs, chord, label)
+                draw(ax, pcs, history, label)
                 fig.canvas.draw_idle()
 
-            plt.pause(0.02)  # Let the window refresh (~50 frames per second)
+            plt.pause(0.02)
 
 
 if __name__ == "__main__":

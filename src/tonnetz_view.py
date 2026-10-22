@@ -16,6 +16,7 @@ NODE_EDGE = "#C9C3DD"          # Light lavender-gray outline
 EDGE_COLOR = "#E6E1EF"         # Very light lines between notes
 TEXT_DARK = "#4A4458"          # Dark plum-gray for idle labels
 TEXT_LIGHT = "#FFFFFF"         # White for active labels
+PATH_COLOR = "#7E6BB0"         # Deep lavender for the chord path
 
 
 def to_screen(x: int, y: int):
@@ -35,8 +36,43 @@ def triangle_vertices(x: int, y: int, quality: str):
         return [(x, y), (x + 1, y), (x + 1, y - 1)]   # Points down
     return []  # Diminished/augmented chords are not triangles
 
+def chord_triangles(chord):
+    """All on-screen triangles (each a list of 3 points) for a chord."""
+    root, quality = chord
+    triangles = []
+    for x in range(WIDTH):
+        for y in range(HEIGHT):
+            if pitch_class_at(x, y) != root:
+                continue
+            verts = triangle_vertices(x, y, quality)
+            if verts and all(in_grid(*v) for v in verts):
+                triangles.append([to_screen(*v) for v in verts])
+    return triangles
 
-def draw(ax, held_pcs, chord=None, label: str = "") -> None:
+def centroid(points):
+    """Center point of a triangle."""
+    xs, ys = zip(*points)
+    return sum(xs) / 3, sum(ys) / 3
+
+
+def trail_path(history):
+    """Pick one triangle per chord so consecutive chords are as close as possible."""
+    path = []
+    for chord in history:
+        candidates = [centroid(t) for t in chord_triangles(chord)]
+        if not candidates:
+            continue  # Skip chords without triangles (dim/aug)
+        # The first chord starts near the middle of the grid
+        target = path[-1] if path else to_screen(WIDTH / 2, HEIGHT / 2)
+        best = min(candidates, key=lambda c: math.dist(c, target))
+        path.append(best)
+    return path
+
+def step_lengths(path):
+    """Distance between each pair of consecutive points on the path."""
+    return [math.dist(p, q) for p, q in zip(path, path[1:])]
+
+def draw(ax, held_pcs, history=(), label: str = "") -> None:
     """Redraw the whole Tonnetz on the given axes."""
     ax.clear()
     ax.set_aspect("equal")
@@ -44,18 +80,13 @@ def draw(ax, held_pcs, chord=None, label: str = "") -> None:
     ax.set_title(label, fontsize=22)
 
     # Layer 1: fill every triangle that matches the current chord
-    if chord:
-        root, quality = chord
+    n = len(history)
+    for i, (root, quality) in enumerate(history):
+        alpha = 0.85 * (i + 1) / n  # Newest chord is the most opaque
         color = MAJOR_COLOR if quality == "major" else MINOR_COLOR
-        for x in range(WIDTH):
-            for y in range(HEIGHT):
-                if pitch_class_at(x, y) != root:
-                    continue
-                verts = triangle_vertices(x, y, quality)
-                if verts and all(in_grid(*v) for v in verts):
-                    points = [to_screen(*v) for v in verts]
-                    ax.add_patch(Polygon(points, closed=True,
-                                         color=color, alpha=0.8, zorder=0))
+        for points in chord_triangles((root, quality)):
+            ax.add_patch(Polygon(points, closed=True,
+                                 color=color, alpha=alpha, zorder=0))
 
     # Layer 2: grid edges (fifth, major third, minor third)
     for x in range(WIDTH):
@@ -79,3 +110,13 @@ def draw(ax, held_pcs, chord=None, label: str = "") -> None:
             ax.text(sx, sy, NOTE_NAMES[pc], ha="center", va="center",
                     fontsize=9, zorder=3,
                     color=TEXT_LIGHT if active else TEXT_DARK)
+    # Layer 4: path connecting recent chords in order
+    path = trail_path(history)
+    if len(path) > 1:
+        xs, ys = zip(*path)
+        ax.plot(xs, ys, color=PATH_COLOR, linewidth=2.5,
+                marker="o", markersize=6, zorder=4)
+        steps = step_lengths(path)
+        step_text = " → ".join(f"{d:.2f}" for d in steps)
+        ax.set_title(f"{label}\nsteps: {step_text}   total: {sum(steps):.2f}",
+                     fontsize=16)
