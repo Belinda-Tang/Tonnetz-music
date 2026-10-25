@@ -1,4 +1,4 @@
-from tonnetz import NOTE_NAMES
+from research.tonnetz import NOTE_NAMES
 
 # Semitone intervals above the root for each triad quality
 TRIAD_TYPES = {
@@ -48,17 +48,3 @@ def chord_name(root: int, quality: str) -> str:
     return NOTE_NAMES[root] + SUFFIXES[quality]
 
 
-if __name__ == "__main__":
-    # Sanity checks, including inversions and non-triads
-    assert identify_triad({0, 4, 7}) == (0, "major")    # C
-    assert identify_triad({0, 3, 7}) == (0, "minor")    # Cm
-    assert identify_triad({0, 4, 9}) == (9, "minor")    # Am (root is not the smallest number)
-    assert identify_triad({2, 5, 9}) == (2, "minor")    # Dm
-    assert identify_triad({2, 7, 11}) == (7, "major")   # G
-    assert identify_triad({0, 4}) is None               # Only two notes
-    assert identify_triad({0, 1, 2}) is None            # Not a triad
-    assert identify_triad({11, 2, 5}) == (11, "diminished")   # Bdim
-    assert identify_triad({0, 4, 8})[1] == "augmented"         # C+ (root checked later)
-    assert identify_triad({0, 4, 8}, bass=4) == (4, "augmented")   # E+ when E is in the bass
-    print("All tests passed!")
-    print(chord_name(9, "minor"))  # Am

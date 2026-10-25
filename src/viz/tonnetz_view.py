@@ -2,7 +2,7 @@ import math
 
 from matplotlib.patches import Polygon
 
-from tonnetz import NOTE_NAMES, pitch_class_at
+from research.tonnetz import NOTE_NAMES, pitch_class_at
 
 WIDTH, HEIGHT = 9, 5             # Grid size (columns, rows)
 ROW_HEIGHT = math.sqrt(3) / 2    # Height of an equilateral triangle

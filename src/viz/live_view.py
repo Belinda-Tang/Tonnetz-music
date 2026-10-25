@@ -3,8 +3,8 @@ from collections import deque
 import matplotlib.pyplot as plt
 import mido
 
-from chords import chord_name, identify_triad
-from tonnetz_view import draw
+from research.chords import chord_name, identify_triad
+from viz.tonnetz_view import draw
 
 
 def main() -> None:

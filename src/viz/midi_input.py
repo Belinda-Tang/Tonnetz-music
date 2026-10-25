@@ -1,6 +1,6 @@
 import mido
-from tonnetz import NOTE_NAMES, print_grid
-from chords import identify_triad, chord_name
+from research.tonnetz import NOTE_NAMES, print_grid
+from research.chords import identify_triad, chord_name
 
 
 def note_name(n: int) -> str:
