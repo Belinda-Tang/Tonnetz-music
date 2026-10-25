@@ -8,10 +8,10 @@ import pytest
 from research.graph_analysis import write_csv, write_distance_plot
 from research.graphs import (
     CHORDS, OPERATIONS, PLR_GRAPH, build_plr_graph,
-    chord_pitch_classes, distance_analysis, expected_plr_by_voice_distance,
-    graph_voice_discordance, is_hexatonic_pole, plr_distance,
-    plr_transform, shortest_plr_path, theoretical_pairs,
-    voice_leading_distance,
+    chord_pitch_classes, conditional_plr_distributions, distance_analysis,
+    expected_plr_by_voice_distance, graph_voice_discordance,
+    is_hexatonic_pole, plr_distance, plr_transform, shortest_plr_path,
+    theoretical_pairs, voice_leading_distance,
 )
 
 C = (0, "major")
@@ -95,6 +95,38 @@ def test_theoretical_discordance_groups_have_zero_mean():
         assert math.isclose(sum(residuals), 0.0, abs_tol=1e-11)
     assert graph_voice_discordance(C, C) == 0
     assert graph_voice_discordance(C, FM) == graph_voice_discordance(FM, C)
+
+
+def test_conditional_plr_distributions():
+    """Regression check for every theoretical distance combination."""
+    expected = {
+        1: {1: 24},
+        2: {1: 12, 2: 24, 3: 24},
+        3: {2: 48, 3: 12, 4: 24},
+        4: {3: 36},
+        5: {3: 24, 5: 12},
+        6: {4: 36},
+    }
+    assert conditional_plr_distributions() == expected
+    assert distance_analysis()["plr_given_voice_histogram"] == expected
+    assert distance_analysis()["pearson_r"] == pytest.approx(0.7380617666652458)
+    assert sum(sum(group.values()) for group in expected.values()) == 276
+    for a, b in theoretical_pairs():
+        if voice_leading_distance(a, b) in (1, 4, 6):
+            assert graph_voice_discordance(a, b) == pytest.approx(0.0)
+
+
+def test_transposition_invariance_of_graph_measures():
+    for a, b in theoretical_pairs():
+        baseline = (plr_distance(a, b), voice_leading_distance(a, b),
+                    graph_voice_discordance(a, b), is_hexatonic_pole(a, b))
+        for shift in (1, 5, 11):
+            x = ((a[0] + shift) % 12, a[1])
+            y = ((b[0] + shift) % 12, b[1])
+            assert plr_distance(x, y) == baseline[0]
+            assert voice_leading_distance(x, y) == baseline[1]
+            assert graph_voice_discordance(x, y) == pytest.approx(baseline[2])
+            assert is_hexatonic_pole(x, y) == baseline[3]
 
 
 def test_analysis_integrity_and_correlation():

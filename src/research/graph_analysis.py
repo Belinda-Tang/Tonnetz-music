@@ -74,6 +74,9 @@ def main() -> None:
     print(f"Pearson r (PLR vs pitch-class VL): {stats['pearson_r']:.4f}")
     print(f"PLR distance distribution: {stats['plr_histogram']}")
     print(f"Mean PLR distance given VL: {stats['mean_plr_by_voice']}")
+    print("PLR counts conditioned on voice-leading distance:")
+    for voice, counts in stats["plr_given_voice_histogram"].items():
+        print(f"  VL={voice} semitones: {counts}")
     for direction, selected in (
         ("Most graph-far (conditional on VL)",
          sorted(records, key=lambda row: (-row["discordance"], row["source"], row["target"]))[:args.top]),

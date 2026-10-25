@@ -1,45 +1,116 @@
-# Graph-theoretic model audit
+# Graph-Theoretic Model of Triad Space
 
-## Scope and definitions
+This project compares two ways of measuring distance between major and minor triads in 12-tone equal temperament: shortest-path distance on the PLR graph and pitch-class voice-leading (VL) distance.
 
-`research.graphs` models **24 major/minor triads** in 12-tone equal temperament as `(root, quality)` pairs, where `root` is a pitch class from 0 to 11.
+The analysis covers all 276 unordered pairs of distinct triads. It also defines graph–voice-leading discordance (GVLD), a conditional residual that describes how a pair's PLR distance differs from the average among pairs with the same VL distance.
 
-- **PLR graph**: one vertex per major/minor triad, with undirected unit-weight edges labeled P, L or R. Distances are **minimum transformation counts** computed with BFS, not Euclidean screen distance. Every vertex has degree 3; the graph has 36 undirected edges and diameter 5.
-- **Pitch-class voice-leading distance**: minimum total circular semitone movement over all 3! bijections between chord pitch-class sets. Octaves, registral motion, performers' finger movements, sustained notes and voice identities are **not** represented.
-- **Hexatonic poles**: a major triad rooted at `r` and a minor triad rooted at `(r + 8) % 12`, or the converse. There are 12 unique unordered pole pairs.
-- **Graph–voice-leading discordance (exploratory)**: `PLR(a,b) - E[PLR | VL(a,b)]`, where the expectation is calculated over all **276 distinct unordered theoretical chord pairs** with the same voice-leading distance. Identical chord pairs receive discordance 0 by convention. The baseline is a uniform theoretical reference, NOT an estimate of actual musical transitions, and no emotion labels are used.
+## Installation
 
-The term *discordance* is a candidate operational definition, **not a validated measure of surprise, tension, emotion or uncanny affect**. Correlation in the theoretical 276 pairs is descriptive and is NOT a hypothesis test on independent observations or evidence about emotion. The 276 unordered pairs avoid duplicate counts of symmetric chord transitions. Both PLR and pitch-class VL distance are transposition-invariant.
+```bash
+python -m pip install -e .
+python -m pip install pytest
+```
 
-## Commands
+## Usage
 
-From the repository root, with the package installed (`pip install -e .`) and pytest installed:
+Run the tests and analysis from the project root:
 
 ```bash
 python -m pytest -q
 python -m research.graph_analysis --csv output/triad_distances.csv --plot output/graph_vs_voice.png --top 10
 ```
 
-The CLI prints node/edge counts, diameter, Pearson correlation between distances and largest positive/negative discordance examples. The optional CSV contains all 276 theoretical chord pairs; `--plot` saves a bubble plot labeled with pair counts. No MIDI input or large datasets are needed for this **Phase 1** module. Do not commit downloaded datasets or generated outputs.
+The analysis generates a CSV distance table, a scatter plot, conditional counts, graph statistics, the Pearson correlation, and the largest conditional residuals. The `--top` argument controls how many residuals are reported.
 
-## Research dependencies and limitations
+## Mathematical Model
 
-1. Chord extraction and segmentation from EMOPIA are a separate task. These graph functions should receive a validated sequence of recognized major/minor triads, plus explicit handling of unknown/uncovered chords. Do not silently skip unmatched chords when computing progression statistics.
-2. Do **not** interpret a higher PLR graph distance as greater emotion/tension; test such hypotheses against external labels and sound controls.
-3. An EMOPIA experiment must fit features and models using **song-disjoint** train/validation/test splits; avoid leakage. The theoretical discordance baseline defined here is corpus-independent and may be used before data splitting.
-4. Verify chord extraction quality, graph coverage, and class/track distributions before running any emotion prediction.
-5. A future progression-feature module can aggregate PLR distances, pitch-class VL distances, pole rates, positive/negative discordance, and missing-chord coverage on time-aligned chord events. This module does not implement dataset features or emotion models.
+Triads are represented as `(root, quality)` tuples in `research.graphs`.
 
-## Mathematical sanity checks
+### PLR Graph Distance
 
-Examples using C major `(0, 'major')`:
+The graph contains 24 vertices, representing the 12 major and 12 minor triads. Two vertices are connected by an undirected, unit-weight edge if they are related by a P (Parallel), L (Leading-tone exchange), or R (Relative) transformation.
 
-| Transition | PLR distance | Pitch-class VL semitones |
-| --- | ---: | ---: |
-| C -> Cm | 1 | 1 |
-| C -> Am | 1 | 2 |
-| C -> Fm | 3 | 2 |
-| C -> Abm | 3 | 3 |
-| C -> B | 4 | 3 |
+The graph is 3-regular, with 36 edges and diameter 5.
 
-For C -> Abm, all three matched pitch classes can move by a semitone while the transformation path needs three PLR operations. Comparing the raw numbers `3 steps` and `3 semitones` is not a meaningful signed difference; the conditional discordance definition addresses the scale issue.
+`plr_distance(a, b)` returns the minimum number of P/L/R transformations needed to connect two triads.
+
+### Voice-Leading Distance
+
+VL distance is the minimum total circular semitone displacement between two triads. The implementation considers all 3! possible matchings between their pitch classes and selects the one with the smallest total displacement.
+
+The calculation ignores octave placement, register, voice identity, and note multiplicity. It is a pitch-class simplification of voice leading rather than an implementation of Tymoczko's generalized chord geometry.
+
+### Hexatonic Poles
+
+A major triad with root `r` and a minor triad with root `(r + 8) mod 12` form a hexatonic-pole pair.
+
+The model identifies these 12 unordered pairs. It does not classify the broader chromatic PL/LP relations discussed by Forrest (2017).
+
+### Graph–Voice-Leading Discordance (GVLD)
+
+GVLD measures the deviation of a pair's PLR distance from the conditional mean at its VL distance:
+
+```text
+D(a, b) = PLR(a, b) - E[PLR | VL = VL(a, b)]
+```
+
+The expectation is calculated over the uniform distribution on all 276 unordered pairs of distinct triads.
+
+- **Positive GVLD:** The pair's PLR distance is above the conditional mean.
+- **Negative GVLD:** The pair's PLR distance is below the conditional mean.
+- **Zero GVLD:** The pair's PLR distance equals the conditional mean.
+
+For identical triads, `D(a, a) = 0` by convention.
+
+PLR distance, VL distance, and GVLD are symmetric and invariant under transposition.
+
+## Results
+
+The table shows the number of unordered triad pairs for each combination of VL and PLR distance.
+
+| VL distance (semitones) | PLR distance: number of pairs |
+| ---: | --- |
+| 1 | 1: 24 |
+| 2 | 1: 12; 2: 24; 3: 24 |
+| 3 | 2: 48; 3: 12; 4: 24 |
+| 4 | 3: 36 |
+| 5 | 3: 24; 5: 12 |
+| 6 | 4: 36 |
+
+The Pearson correlation between PLR and VL distance across all 276 pairs is **0.73806177**.
+
+Although the distances are positively correlated, equal VL distances do not always imply equal PLR distances. For example, a VL distance of 2 semitones can correspond to 1, 2, or 3 PLR steps.
+
+For VL distances of 1, 4, and 6, the PLR distance is constant, so GVLD is zero for every pair in those classes.
+
+These are descriptive results from a complete enumeration of the finite triad space, not estimates from a sample of musical transitions.
+
+## Sequence Features
+
+The `research.sequence_features` module computes distance-based features and coverage statistics for ordered sequences of pre-labelled major/minor chords.
+
+Unknown chords are represented by `None` and interrupt the transition sequence.
+
+The module currently expects chord labels as input. MIDI chord extraction, duration modelling, and EMOPIA dataset processing are not implemented.
+
+## Limitations
+
+- **Previous work.** PLR transformations, Tonnetz relations, parsimonious voice leading, and generalized chord geometries are established in music theory. This project implements and compares existing distance measures rather than proposing a new theory of harmonic space. See [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) for further discussion.
+
+- **GVLD.** GVLD is derived from PLR and VL distances and contains no additional information beyond them. Any predictive benefit would need to be evaluated against models using both original distances, including their interaction. A zero residual indicates agreement with the conditional mean, not that a transition is common or expected in actual music.
+
+- **Chord quality.** Every P/L/R transformation changes chord quality. Consequently, PLR distances are odd between triads of different qualities and even between triads of the same quality. Downstream analyses must account for this dependence.
+
+- **Musical context.** The model does not account for key, harmonic function, phrase position, harmonic direction, or performed voicing. Neither GVLD nor hexatonic-pole membership has been validated as a measure of tension, surprise, or uncanniness.
+
+## Future Work
+
+- Evaluate chord-extraction accuracy and PLR coverage on sampled clips, including unsupported chords and sensitivity to segmentation.
+- Compare PLR, VL, and GVLD-based features using song-disjoint training, validation, and test sets.
+- Examine associations with EMOPIA's four categorical emotion quadrants, without treating the labels as continuous measures of musical tension.
+
+## References
+
+- Cohn, R. (1997). Neo-Riemannian operations, parsimonious trichords, and their "Tonnetz" representations. *Journal of Music Theory*, 41(1), 1–66. https://doi.org/10.2307/843761
+- Tymoczko, D. (2011). *A Geometry of Music: Harmony and Counterpoint in the Extended Common Practice*. Oxford University Press.
+- Forrest, D. (2017). PL voice leading and the uncanny in pop music. *Music Theory Online*, 23(4). https://mtosmt.org/issues/mto.17.23.4/mto.17.23.4.forrest.html

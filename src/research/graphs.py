@@ -162,13 +162,27 @@ def expected_plr_by_voice_distance() -> dict[int, float]:
     return {v: total[v] / count[v] for v in sorted(count)}
 
 
-def graph_voice_discordance(source: Chord, target: Chord) -> float:
-    """PLR distance residual after conditioning on pitch-class VL distance.
+def conditional_plr_distributions() -> dict[int, dict[int, int]]:
+    """Tabulate PLR distances conditional on pitch-class voice-leading cost.
 
-    Zero denotes an ordinary graph distance within this theoretical matching
-    class; positive is graph-far relative to equal VL distance. This is not an
-    experimentally validated measure of affect, tension or surprise. Identical
-    chord pairs return 0 by convention and are not in the reference baseline.
+    Counts come from all 276 unordered distinct major/minor triad pairs,
+    not from observed transitions or emotion labels.
+    """
+    counts: dict[int, Counter[int]] = {}
+    for source, target in theoretical_pairs():
+        voice = voice_leading_distance(source, target)
+        graph = plr_distance(source, target)
+        counts.setdefault(voice, Counter())[graph] += 1
+    return {v: dict(sorted(row.items())) for v, row in sorted(counts.items())}
+
+
+def graph_voice_discordance(source: Chord, target: Chord) -> float:
+    """PLR distance minus the theoretical conditional mean for the same VL cost.
+
+    Zero means equal to that mean, NOT that a progression is common in music
+    or perceptually unremarkable. This is not a validated emotional measure.
+    Identical chord pairs return zero by convention and are excluded from
+    the conditional reference distribution.
     """
     source = _validate_chord(source)
     target = _validate_chord(target)
@@ -193,7 +207,7 @@ def pearson_correlation(xs: list[int], ys: list[int]) -> float:
 
 
 def distance_analysis() -> dict[str, object]:
-    """Small exhaustive theoretical audit; does not involve dataset inference."""
+    """Exhaustive theoretical audit, not a statistical study of music."""
     pairs = theoretical_pairs()
     gs = [plr_distance(a, b) for a, b in pairs]
     vs = [voice_leading_distance(a, b) for a, b in pairs]
@@ -217,5 +231,6 @@ def distance_analysis() -> dict[str, object]:
         "plr_histogram": dict(sorted(Counter(gs).items())),
         "voice_leading_histogram": dict(sorted(Counter(vs).items())),
         "mean_plr_by_voice": expected_plr_by_voice_distance().copy(),
+        "plr_given_voice_histogram": conditional_plr_distributions(),
         "records": records,
     }
