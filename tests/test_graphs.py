@@ -5,8 +5,8 @@ import math
 
 import pytest
 
-from src.research.graph_analysis import write_csv, write_distance_plot
-from src.research.graphs import (
+from research.graph_analysis import write_csv, write_distance_plot
+from research.graphs import (
     CHORDS, OPERATIONS, PLR_GRAPH, build_plr_graph,
     chord_pitch_classes, distance_analysis, expected_plr_by_voice_distance,
     graph_voice_discordance, is_hexatonic_pole, plr_distance,
