@@ -1,5 +1,5 @@
-from research.chords import chord_name, identify_triad
-from research.tonnetz import pitch_class_at
+from src.research.chords import chord_name, identify_triad
+from src.research.tonnetz import pitch_class_at
 
 
 def test_grid_intervals():
