@@ -102,12 +102,12 @@ requirements.txt          # Earlier pinned visualization environment
 
 ## Planned research protocol and milestones
 
-| Work | Lead | Status |
-| --- | --- | --- |
-| Review PLR, voice leading and related emotion work; create literature matrix | R + B | Planned |
-| Audit PLR graph, distances, invariance, conditional distributions and tests | R | Implemented in code |
-| Split viewer and research into Python packages | B | Implemented |
-| Inspect EMOPIA formats, permissions and license | B | Planned |
+| Work | Lead | Status          |
+| --- | --- |-----------------|
+| Review PLR, voice leading and related emotion work; create literature matrix | R + B | Planned         |
+| Audit PLR graph, distances, invariance, conditional distributions and tests | R | Implemented     |
+| Split viewer and research into Python packages | B | Implemented     |
+| Inspect EMOPIA formats, permissions and license | B | Planned         |
 | Validate time-aligned chord extraction and triad coverage | B + R | Not implemented |
 | Compute six-dimensional tonal centroid and symbolic baselines | B + R | Not implemented |
 | Song-disjoint emotion classification, ablation and uncertainty analysis | R + B | Not implemented |
