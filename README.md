@@ -1,125 +1,127 @@
 # Tonnetz-music
 
-**See harmony as shapes.** Play chords on a MIDI keyboard and watch them light up on a live Tonnetz, a geometric map of musical harmony.
+**See harmony as shapes — and study the mathematics of harmonic transitions.**
 
-<!-- Replace with your demo video or GIF (see "Adding the demo" in the reply) -->
-![Demo](assets/demo.gif)
+Tonnetz-music began as a Python MIDI keyboard visualizer and now contains an exploratory **graph-theoretic research toolkit**. Our working research question is:
 
----
+> **Do graph-based harmonic features provide additional information for music emotion prediction?**
 
-## What is the Tonnetz?
+The planned study will compare discrete Neo-Riemannian transformation features with pitch-class voice leading, six-dimensional tonal-centroid (Tonnetz) features, and conventional symbolic musical features. We will investigate whether any features provide reproducible incremental predictive value for valence and arousal.
 
-The Tonnetz ("tone network") is a grid where every node is a note and neighbors are related by simple intervals:
+**Status (October 2026):** The live visualization, graph models, 276-pair theoretical audit, and sequence-feature summaries have code implementations. **EMOPIA loading, validated MIDI-to-chord extraction, emotion prediction, statistical evaluation, and a completed paper have not been implemented.** No findings about perceived musical emotion are claimed.
 
-| Direction | Interval | Example |
-|---|---|---|
-| → right | Perfect fifth (+7 semitones) | C → G |
-| ↗ up-right | Major third (+4 semitones) | C → E |
-| ↘ down-right | Minor third (+3 semitones) | C → E♭ |
+## Implemented research models
 
-On this grid, every **major triad is an upward triangle** and every **minor triad is a downward triangle**. Chords that sound smooth together sit right next to each other.
+The PLR graph contains 24 vertices (12 major and 12 minor triads in 12-tone equal temperament), 36 undirected P/L/R edges, and has diameter 5. It uses BFS to compute the shortest number of transformations. In contrast, pitch-class voice-leading distance minimizes the total circular semitone movement under all three-note matchings; it does **not** measure actual fingering, specific octave/register motion, or performed voice identity.
 
-## Features
+Implemented in `src/research/graphs.py`:
 
-- 🎹 **Live MIDI input** from any USB MIDI keyboard
-- 🔺 **Chord recognition** for major, minor, diminished and augmented triads, in any inversion or octave
-- 🎨 **Real-time visualization**: held notes light up, major triads glow pink, minor triads glow mint green
+- `plr_transform`, `build_plr_graph`, `shortest_plr_path`, `plr_distance`
+- `chord_pitch_classes`, `voice_leading_distance`, `is_hexatonic_pole`
+- `graph_voice_discordance`: a candidate **descriptive** residual, not a validated emotion/tension score
+- `theoretical_pairs`, `distance_analysis`, `conditional_plr_distributions`
 
-## How it works
+For distinct major/minor triads A and B, the exploratory discordance definition is:
 
-**1. Notes → pitch classes.** Octaves are ignored, so C4 and C5 are both `0`. This matches the Tonnetz, where each node is a note name rather than a specific pitch.
-
-**2. Pitch class at any grid point.**
-
-```
-pitch_class(x, y) = (7x + 4y) mod 12
+```text
+D(A, B) = PLR(A, B) - mean[PLR(X, Y) | VL(X, Y) = VL(A, B)]
 ```
 
-`x` counts steps of a fifth, `y` counts steps of a major third. Instead of searching for a note's position, the program computes the note at every grid point and highlights every match.
+The reference contains **all 276 unordered, distinct theoretical chord pairs**, counted uniformly. Self-transitions have discordance zero by convention. The theoretical model has variable conditional PLR distance only for voice-leading costs of 2, 3 and 5 semitones; the other groups have a constant PLR distance.
 
-**3. Chord recognition.** Each note is tried as the root, and the intervals above it are compared with templates:
+**Research limitation:** Discordance is a deterministic transformation of the two input distances. It cannot contain information absent from their joint values. Later experiments **must** include a baseline with PLR and voice-leading distances together (and suitable interaction controls), not just each distance separately. The graph analysis alone gives **no evidence about emotion, surprise or uncanniness**. See [`paper/GRAPH_MODEL.md`](paper/GRAPH_MODEL.md).
 
-| Quality | Intervals above root |
-|---|---|
-| Major | {0, 4, 7} |
-| Minor | {0, 3, 7} |
-| Diminished | {0, 3, 6} |
-| Augmented | {0, 4, 8} |
+`src/research/sequence_features.py` summarizes existing sequences of identified major/minor triads: graph distances, voice-leading distances, discordance, hexatonic-pole frequency, repetitions and coverage. `None` means an unknown event and **breaks** the transition; unsupported chord qualities must be explicitly mapped upstream. The module does not parse MIDI or include durations.
 
-The augmented triad is **symmetric**: it splits the octave into three equal parts, so every note fits as the root. C+, E+ and G♯+ contain exactly the same notes. The program resolves this by preferring the lowest note being played.
+## Visualization
 
-## Observations
+The separate real-time viewer can recognize major, minor, diminished and augmented triads and highlight pitch classes in a finite 2D Tonnetz lattice with
 
-Playing **C → Am → F → G**, one of the most common progressions in pop music:
+```text
+pitch_class(x, y) = (7*x + 4*y) mod 12
+```
 
-- **C → Am** and **Am → F** are neighboring triangles that share an edge. Only one note moves, which is why these changes sound smooth.
-- **F → G** shares no notes, so the chord *jumps* across the grid. That jump creates tension, which **G → C** resolves.
+The fading on-screen trail is a **greedy screen-space visualization**, **not** PLR graph distance or a validated harmonic tension metric. Diminished and augmented chords are not represented as Tonnetz triangles in the current trail algorithm. Live MIDI operation requires a MIDI keyboard and a compatible local MIDI device setup.
 
-Flipping a triangle across one edge corresponds to the three operations of Neo-Riemannian theory:
+## Installation
 
-- **P** (Parallel): C ↔ Cm
-- **R** (Relative): C ↔ Am
-- **L** (Leading-tone): Am ↔ F
-
-### Demo progression
-
-The demo uses a progression that covers all four triad types:
-
-**C → Caug → F → Fm → C → G → G♯dim → Am**
-
-The inner voices move by single semitones (G → G♯ → A, and A → A♭), so each step changes just one node on the grid.
-
-## Getting started
-
-### Requirements
-
-- Python 3.10+
-- A USB MIDI keyboard (developed with a Roland JUNO-DS)
-
-### Installation
+Python 3.10 or later is required. A MIDI keyboard is **not needed** for the research audit and unit tests.
 
 ```bash
-git clone https://github.com/<your-username>/tonnetz-music.git
-cd tonnetz-music
+git clone https://github.com/Belinda-Tang/Tonnetz-music.git
+cd Tonnetz-music
+git switch feature/graph-metrics
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+# macOS / Linux: source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -e .
+python -m pip install pytest
 ```
 
-### Run
+### Unit tests and reproducible theoretical audit
 
 ```bash
-python src/live_view.py      # Graphical Tonnetz (close the window to quit)
-python src/midi_input.py     # Text version in the terminal
+python -m pytest -q
+python -m research.graph_analysis --top 10
+python -m research.graph_analysis --csv output/triad_distances.csv --plot output/graph_vs_voice.png
 ```
 
-> **Keyboard not detected?** Check Audio MIDI Setup → MIDI Studio (⌘2) on macOS. Some Roland keyboards need **[SYSTEM] → USB Driver** set to **GENERIC** to work without a vendor driver.
+The analysis CLI reports the number of nodes/edges, graph diameter, Pearson correlation across the 276 theoretical pairs, conditional distance distributions and transitions with extreme conditional residuals. Generated `output/` files are ignored by Git. **The theoretical correlation is descriptive, not a significance test on independently sampled music.**
 
-## Project structure
+### Live MIDI (optional)
 
-```
-tonnetz-music/
-├── src/
-│   ├── tonnetz.py        # Grid math: pitch class at (x, y)
-│   ├── chords.py         # Triad recognition
-│   ├── tonnetz_view.py   # Matplotlib drawing
-│   ├── live_view.py      # Live MIDI → graphical Tonnetz
-│   └── midi_input.py     # Live MIDI → terminal output
-├── data/
-├── notebooks/
-└── requirements.txt
+```bash
+python -m viz.live_view
+# or
+python -m viz.midi_input
 ```
 
-## Roadmap
+## Repository layout
 
-- [x] Live MIDI input
-- [x] Triad recognition
-- [x] Graphical Tonnetz with live highlighting
-- [ ] Chord trails: show the path a progression takes across the grid
-- [ ] Read MIDI files and draw the trajectory of a whole song
-- [ ] 3D torus view
-- [ ] Analyze how harmonic complexity in popular music has changed over the decades
+```text
+src/
+  research/
+    chords.py             # Triad recognition
+    tonnetz.py            # Tonnetz lattice arithmetic
+    graphs.py             # PLR graph, voice leading, discordance
+    graph_analysis.py     # Theoretical analysis, CSV/plot export
+    sequence_features.py  # Features from existing chord-event sequences
+  viz/
+    live_view.py          # Real-time MIDI visualization
+    midi_input.py         # Terminal MIDI feedback
+    tonnetz_view.py       # Geometric display and fading trail
+tests/                    # Graph, chord and missing-data tests
+paper/
+  GRAPH_MODEL.md          # Mathematical definitions and limitations
+  DECISIONS.md            # Study decision log
+  README.md               # Paper and literature notes
+data/README.md            # Dataset instructions (raw data not committed)
+pyproject.toml            # Installable src-layout package
+requirements.txt          # Earlier pinned visualization environment
+```
+
+## Planned research protocol and milestones
+
+| Work | Lead | Status          |
+| --- | --- |-----------------|
+| Review PLR, voice leading and related emotion work; create literature matrix | R + B | Planned         |
+| Audit PLR graph, distances, invariance, conditional distributions and tests | R | Implemented     |
+| Split viewer and research into Python packages | B | Implemented     |
+| Inspect EMOPIA formats, permissions and license | B | Planned         |
+| Validate time-aligned chord extraction and triad coverage | B + R | Not implemented |
+| Compute six-dimensional tonal centroid and symbolic baselines | B + R | Not implemented |
+| Song-disjoint emotion classification, ablation and uncertainty analysis | R + B | Not implemented |
+| Manuscript, external critique and submission decision | R + B | Not implemented |
+
+
+The emotion experiment must compare **symbolic baseline**, **tonal centroid baseline**, **PLR + voice-leading joint baseline**, and **joint baseline plus candidate discordance features**. Models and preprocessing must use **song-disjoint** train/validation/test partitions. Extraction quality, unsupported chords, time segmentation and missing-event coverage must be reported. The four EMOPIA quadrants are categorical labels, **not** continuous valence/arousal ground-truth scores.
+
+## Dataset and scholarly context
+
+Planned dataset: [EMOPIA](https://annahung31.github.io/EMOPIA), released separately under CC BY-NC-SA 4.0; see [`data/README.md`](data/README.md). No copyrighted dataset is committed here. The MIT license of our code **does not** change the dataset's license.
+
+Relevant foundations include Cohn's Neo-Riemannian theory, Tymoczko's *The Geometry of Musical Chords* (2006), and the EMOPIA dataset (ISMIR 2021). Tonnetz and tonal-centroid features have already been used in musical analysis; **novelty and predictive benefits remain open empirical questions**. A research paper has not yet been submitted.
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](LICENSE).
